@@ -1,0 +1,200 @@
+import h5py
+import argparse
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.colors as colors
+
+# again, we are going to use argparser to read in files!
+# this time we are going to use nargs='+' to say "allow more than one argument"
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-f", type=str, nargs='+',
+	dest="input_files", required=True,
+	help="paths to input files (absolute or relative)")
+args = parser.parse_args()
+files = args.input_files
+
+# we make an empty array for each
+ophelia_azimuth = np.asarray([])
+linefit_azimuth = np.asarray([])
+true_azimuth = np.asarray([])
+ophelia_zenith = np.asarray([])
+linefit_zenith = np.asarray([])
+true_zenith = np.asarray([])
+hqtot = np.asarray([])
+
+# now, we loop over every file
+for file in files:
+
+	# we open the hdf5 file for reading
+	file_in = h5py.File(file, "r")
+
+	# and now we "concatenate" our existing list and the new list!
+ 
+	# note, if you want to see what variable names are available, 
+	# you can try something like the following
+	# print(file_in['EHEOpheliaParticleSRT_ImpLF'].dtype.names)
+
+	# try/except statements are way of preventing the program from crashing 
+	# if something is horribly wrong
+	try:
+		ophelia_azimuth = np.concatenate((ophelia_azimuth, 
+			file_in['EHEOpheliaParticleSRT_ImpLF']['azimuth']))
+		linefit_azimuth = np.concatenate((linefit_azimuth,
+			file_in['LineFit']['azimuth']))
+		true_azimuth = np.concatenate((true_azimuth,
+			file_in['NuPrimary']['azimuth']))
+		ophelia_zenith = np.concatenate((ophelia_zenith, 
+			file_in['EHEOpheliaParticleSRT_ImpLF']['zenith']))
+		linefit_zenith = np.concatenate((linefit_zenith,
+			file_in['LineFit']['zenith']))
+		true_zenith = np.concatenate((true_zenith,
+			file_in['NuPrimary']['zenith']))
+		hqtot = np.concatenate((hqtot,
+			file_in['Homogenized_QTot']['value']))
+	except:
+		print('Skipping {}'.format(file))
+
+	# close the file
+	file_in.close()
+
+log_qtot = np.log10(hqtot)
+mask = log_qtot > 4
+print(mask)
+
+
+# we are going to convert the radians to degrees
+ophelia_azimuth = np.rad2deg(ophelia_azimuth)
+linefit_azimuth = np.rad2deg(linefit_azimuth)
+true_azimuth = np.rad2deg(true_azimuth)
+ophelia_zenith = np.rad2deg(ophelia_zenith)
+linefit_zenith = np.rad2deg(linefit_zenith)
+true_zenith = np.rad2deg(true_zenith)
+# subtract true-recon
+ophelia_diff_azi = np.subtract(true_azimuth,ophelia_azimuth)
+linefit_diff_azi = np.subtract(true_azimuth,linefit_azimuth)
+ophelia_diff_zen = np.subtract(true_zenith,ophelia_zenith)
+linefit_diff_zen = np.subtract(true_zenith,linefit_zenith)
+# absolute value true-recon
+ophelia_abs_azi = np.abs(ophelia_diff_azi)
+linefit_abs_azi = np.abs(linefit_diff_azi)
+ophelia_abs_zen = np.abs(ophelia_diff_zen)
+linefit_abs_zen = np.abs(linefit_diff_zen)
+# ophelia-linefit diff and absdiff
+recon_diff_zen = np.subtract(ophelia_zenith,linefit_zenith)
+recon_abs_zen = np.abs(recon_diff_zen)
+
+
+
+# absolute value true-recon plot
+fig = plt.figure(figsize=(5,5))
+ax = fig.add_subplot(111)
+bins = np.linspace(0,90,91) # let's do uniform binning
+# ax.hist(ophelia_abs_azi[mask],bins=bins, alpha=0.5, label='Ophelia Azimuth')
+# ax.hist(linefit_abs_azi[mask],bins=bins, alpha=0.5, label='LineFit Azimuth')
+ax.hist(ophelia_abs_zen[mask],bins=bins, alpha=0.5, label='Ophelia Zenith')
+ax.hist(linefit_abs_zen[mask],bins=bins, alpha=0.5, label='LineFit Zenith')
+ax.set_yscale('log')
+ax.set_ylabel('Number of Events')
+ax.set_xlabel('Absolute(True-Recon) [deg]')
+ax.legend()
+plt.title('Corsika Neutrinos')
+plt.tight_layout()
+fig.savefig('fig_zen_absdiff_corsikas(chargecut).png', dpi=300)
+del fig, ax
+'''
+# absolute value true-recon plot zoomed
+fig = plt.figure(figsize=(5,5))
+bx = fig.add_subplot(111)
+bins = np.linspace(0,180,91) # let's do uniform binning
+# bx.hist(ophelia_abs_azi[mask],bins=bins, alpha=0.5, label='Ophelia Azimuth')
+# bx.hist(linefit_abs_azi[mask],bins=bins, alpha=0.5, label='LineFit Azimuth')
+bx.hist(ophelia_abs_zen[mask],bins=bins, alpha=0.5, label='Ophelia Zenith')
+bx.hist(linefit_abs_zen[mask],bins=bins, alpha=0.5, label='LineFit Zenith')
+bx.set_yscale('log')
+bx.set_ylabel('Number of Events')
+bx.set_xlabel('Absolute(True-Recon) [deg]')
+bx.legend()
+plt.title('Corsika Neutrinos')
+plt.tight_layout()
+fig.savefig('fig_zen_absdiff_corsikas_zoom(chargecut).png', dpi=300)
+del fig, bx
+plt.title('Corsika Neutrinos')
+'''
+# difference true-recon plot
+fig = plt.figure(figsize=(5,5))
+cx = fig.add_subplot(111)
+bins = np.linspace(-360,360,145) # let's do uniform binning
+# cx.hist(ophelia_diff_azi[mask],bins=bins, alpha=0.5, label='Ophelia Azimuth')
+# cx.hist(linefit_diff_azi[mask],bins=bins, alpha=0.5, label='LineFit Azimuth')
+cx.hist(ophelia_diff_zen,bins=bins, alpha=0.5, label='Ophelia Zenith')
+cx.hist(linefit_diff_zen,bins=bins, alpha=0.5, label='LineFit Zenith')
+cx.set_yscale('log')
+cx.set_ylabel('Number of Events')
+cx.set_xlabel('True-Recon [deg]')
+cx.legend()
+plt.title('Corsika Neutrinos')
+plt.tight_layout()
+fig.savefig('fig_zen_diff_corsikas(chargecut).png', dpi=300)
+del fig, cx, bins
+
+# difference true-recon plot zoomed
+fig = plt.figure(figsize=(5,5))
+dx = fig.add_subplot(111)
+bins = np.linspace(-60,60,121) # let's do uniform binning
+# dx.hist(ophelia_diff_azi[mask],bins=bbbbins, alpha=0.5, label='Ophelia Azimuth')
+# dx.hist(linefit_diff_azi[mask],bins=bbbbins, alpha=0.5, label='LineFit Azimuth')
+dx.hist(ophelia_diff_zen,bins=bins, alpha=0.5, label='Ophelia Zenith')
+dx.hist(linefit_diff_zen,bins=bins, alpha=0.5, label='LineFit Zenith')
+dx.set_yscale('log')
+dx.set_ylabel('Number of Events')
+dx.set_xlabel('True-Recon [deg]')
+dx.legend()
+plt.title('Corsika Neutrinos')
+plt.tight_layout()
+fig.savefig('fig_zen_diff_corsikas_zoom(chargecut).png', dpi=300)
+del fig, dx, bins
+
+# absolute value ophelia-linefit plot
+fig = plt.figure(figsize=(5,5))
+ax = fig.add_subplot(111)
+bins = np.linspace(0,90,91) # let's do uniform binning
+ax.hist(recon_abs_zen[mask],bins=bins, alpha=0.5, label='Ophelia-Linefit Zenith')
+ax.set_yscale('log')
+ax.set_ylabel('Number of Events')
+ax.set_xlabel('Absolute(Ophelia-LineFit) [deg]')
+ax.legend()
+plt.title('Corsika Neutrinos')
+plt.tight_layout()
+fig.savefig('fig_zen_reconabsdiff_corsikas(chargecut).png', dpi=300)
+del fig, ax, bins
+
+# difference ophelia-linefit plot
+fig = plt.figure(figsize=(5,5))
+cx = fig.add_subplot(111)
+bins = np.linspace(-360,360,145)
+cx.hist(recon_diff_zen[mask],bins=bins, alpha=0.5, label='Ophelia-Linefit Zenith')
+cx.set_yscale('log')
+cx.set_ylabel('Number of Events')
+cx.set_xlabel('Ophelia-LineFit [deg]')
+cx.legend()
+plt.title('Corsika Neutrinos')
+plt.tight_layout()
+fig.savefig('fig_zen_recondiff_corsikas(chargecut).png', dpi=300)
+del fig, cx, bins
+
+# difference ophelia-linefit plot zoomed
+fig = plt.figure(figsize=(5,5))
+dx = fig.add_subplot(111)
+bins = np.linspace(-60,60,121)
+dx.hist(recon_diff_zen[mask],bins=bins, alpha=0.5, label='Ophelia-Linefit Zenith')
+dx.set_yscale('log')
+dx.set_ylabel('Number of Events')
+dx.set_xlabel('Ophelia-LineFit [deg]')
+dx.legend()
+plt.title('Corsika Neutrinos')
+plt.tight_layout()
+fig.savefig('fig_zen_recondiff_corsikas_zoom(chargecut).png', dpi=300)
+del fig, dx, bins
+
+
