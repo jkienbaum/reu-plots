@@ -1,0 +1,105 @@
+import h5py
+import argparse
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.colors as colors
+
+# again, we are going to use argparser to read in files!
+# this time we are going to use nargs='+' to say "allow more than one argument"
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-f", type=str, nargs='+',
+	dest="input_files", required=True,
+	help="paths to input files (absolute or relative)")
+args = parser.parse_args()
+files = args.input_files
+
+# we make an empty array for each
+ophelia_azimuth = np.asarray([])
+linefit_azimuth = np.asarray([])
+true_azimuth = np.asarray([])
+ophelia_zenith = np.asarray([])
+linefit_zenith = np.asarray([])
+true_zenith = np.asarray([])
+hqtot = np.asarray([])
+
+# now, we loop over every file
+for file in files:
+	# we open the hdf5 file for reading
+	file_in = h5py.File(file, "r")
+	# note, if you want to see what variable names are available, 
+	# you can try something like the following
+	# print(file_in['EHEOpheliaParticleSRT_ImpLF'].dtype.names)
+ 
+	# try/except statements are way of preventing the program from crashing 
+	# if something is horribly wrong
+	try:
+		ophelia_azimuth = np.concatenate((ophelia_azimuth, 
+			file_in['EHEOpheliaParticleSRT_ImpLF']['azimuth']))
+		linefit_azimuth = np.concatenate((linefit_azimuth,
+			file_in['LineFit']['azimuth']))
+		true_azimuth = np.concatenate((true_azimuth,
+			file_in['NuPrimary']['azimuth']))
+		ophelia_zenith = np.concatenate((ophelia_zenith, 
+			file_in['EHEOpheliaParticleSRT_ImpLF']['zenith']))
+		linefit_zenith = np.concatenate((linefit_zenith,
+			file_in['LineFit']['zenith']))
+		true_zenith = np.concatenate((true_zenith,
+			file_in['NuPrimary']['zenith']))
+		hqtot = np.concatenate((hqtot,
+			file_in['Homogenized_QTot']['value']))
+	except:
+		print('Skipping {}'.format(file))
+
+	# close the file
+	file_in.close()
+
+# we are going to convert the radians to degrees
+ophelia_azimuth = np.rad2deg(ophelia_azimuth)
+linefit_azimuth = np.rad2deg(linefit_azimuth)
+true_azimuth = np.rad2deg(true_azimuth)
+ophelia_zenith = np.rad2deg(ophelia_zenith)
+linefit_zenith = np.rad2deg(linefit_zenith)
+true_zenith = np.rad2deg(true_zenith)
+#mask
+log_qtot = np.log10(hqtot)
+mask = log_qtot > 4
+print(mask)
+
+
+# true-vs-ophelia zenith 2dhist plot
+x = ophelia_zenith[mask]
+y = true_zenith[mask]
+fig = plt.figure(figsize=(5,5))
+ax = fig.add_subplot(111)
+xbins = np.linspace(0,180,91)
+ybins = np.linspace(0,180,91)
+h = ax.hist2d(x,y,bins=(xbins,ybins), cmin=1)
+fig.colorbar(h[3], ax=ax)
+ax.set_ylabel('Truth (\u03B8)')
+ax.set_xlabel('Ophelia (\u03B8)')
+plt.title('Muon Neutrinos')
+plt.tight_layout()
+fig.savefig('fig_zen_true-vs-ophelia_muons(chargecut).png', dpi=300)
+del fig, ax, x
+
+# true-vs-linefit zenith 2dhist plot
+x = linefit_zenith[mask]
+y = true_zenith[mask]
+fig = plt.figure(figsize=(5,5))
+ax = fig.add_subplot(111)
+xbins = np.linspace(0,180,91)
+ybins = np.linspace(0,180,91)
+h = ax.hist2d(x,y,bins=(xbins,ybins), cmin=1)
+fig.colorbar(h[3], ax=ax)
+ax.set_ylabel('Truth (\u03B8)')
+ax.set_xlabel('LineFit (\u03B8)')
+plt.title('Muon Neutrinos')
+plt.tight_layout()
+fig.savefig('fig_zen_true-vs-linefit_muons(chargecut).png', dpi=300)
+del fig, ax
+
+
+
+
+
