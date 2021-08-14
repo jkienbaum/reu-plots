@@ -1,0 +1,110 @@
+import h5py
+import argparse
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.colors as colors
+
+# again, we are going to use argparser to read in files!
+# this time we are going to use nargs='+' to say "allow more than one argument"
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-f", type=str, nargs='+',
+	dest="input_files", required=True,
+	help="paths to input files (absolute or relative)")
+args = parser.parse_args()
+files = args.input_files
+
+# let's start by making a histogram of the true and reconstructed directions
+# so, we make an empty array for each
+
+ophelia_azimuth = np.asarray([])
+linefit_azimuth = np.asarray([])
+true_azimuth = np.asarray([])
+hqtot = np.asarray([])
+
+
+# now, we loop over every file
+for file in files:
+
+	# we open the hdf5 file for reading
+	file_in = h5py.File(file, "r")
+
+	# and now we "concatenate" our existing list and the new list!
+
+	# note, if you want to see what variable names are available, 
+	# you can try something like the following
+	#print(file_in.keys())
+	#print(file_in['Homogenized_QTot'].dtype.names)
+
+
+	# try/except statements are way of preventing the program from crashing 
+	# if something is horribly wrong
+	try:
+		ophelia_azimuth = np.concatenate((ophelia_azimuth, 
+			file_in['EHEOpheliaParticleSRT_ImpLF']['azimuth']))
+		linefit_azimuth = np.concatenate((linefit_azimuth,
+			file_in['LineFit']['azimuth']))
+		true_azimuth = np.concatenate((true_azimuth,
+			file_in['NuPrimary']['azimuth']))
+		ophelia_azimuth = np.concatenate((ophelia_azimuth, 
+			file_in['EHEOpheliaParticleSRT_ImpLF']['azimuth']))
+		linefit_azimuth = np.concatenate((linefit_azimuth,
+			file_in['LineFit']['azimuth']))
+		true_azimuth = np.concatenate((true_azimuth,
+			file_in['NuPrimary']['azimuth']))
+		hqtot = np.concatenate((hqtot,
+			file_in['Homogenized_QTot']['value']))
+	except:
+		print('Skipping {}'.format(file))
+
+	# close the file
+	file_in.close()
+
+
+y = np.log10(hqtot)
+
+
+# azimuth ophelia
+x = np.cos(ophelia_azimuth)
+fig = plt.figure(figsize=(5,5))
+ax = fig.add_subplot(111)
+xbins = np.linspace(-1,1,75)
+ybins = np.linspace(2.98,np.log10(np.max(hqtot)),75)
+h = ax.hist2d(x,y,bins=(xbins,ybins), cmap=plt.cm.plasma, cmin=1)
+fig.colorbar(h[3], ax=ax)
+ax.set_ylabel('log(NPE)')
+ax.set_xlabel('cos[\u03C6]')
+plt.title('Ophelia Electron')
+plt.tight_layout()
+fig.savefig('fig_azi_logcounts-vs-cos(ophelia_electrons).png', dpi=300)
+del fig, ax, x
+
+# azimuth linefit
+x = np.cos(linefit_azimuth)
+fig = plt.figure(figsize=(5,5))
+ax = fig.add_subplot(111)
+xbins = np.linspace(-1,1,75)
+ybins = np.linspace(2.98,np.log10(np.max(hqtot)),75)
+h = ax.hist2d(x,y,bins=(xbins,ybins), cmap=plt.cm.plasma, cmin=1)
+fig.colorbar(h[3], ax=ax)
+ax.set_ylabel('log(NPE)')
+ax.set_xlabel('cos[\u03C6]')
+plt.title('Linefit Electron')
+plt.tight_layout()
+fig.savefig('fig_azi_logcounts-vs-cos(linefit_electrons).png', dpi=300)
+del fig, ax, x
+
+# azimuth true
+x = np.cos(true_azimuth)
+fig = plt.figure(figsize=(5,5))
+ax = fig.add_subplot(111)
+xbins = np.linspace(-1,1,75)
+ybins = np.linspace(2.98,np.log10(np.max(hqtot)),75)
+h = ax.hist2d(x,y,bins=(xbins,ybins), cmap=plt.cm.plasma, cmin=1)
+fig.colorbar(h[3], ax=ax)
+ax.set_ylabel('log(NPE)')
+ax.set_xlabel('cos[\u03C6]')
+plt.title('True Electron')
+plt.tight_layout()
+fig.savefig('fig_azi_logcounts-vs-cos(true_electrons).png', dpi=300)
+del fig, ax, x
