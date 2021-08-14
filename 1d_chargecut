@@ -1,0 +1,144 @@
+import h5py
+import argparse
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.colors as colors
+
+# again, we are going to use argparser to read in files!
+# this time we are going to use nargs='+' to say "allow more than one argument"
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-f", type=str, nargs='+',
+	dest="input_files", required=True,
+	help="paths to input files (absolute or relative)")
+args = parser.parse_args()
+files = args.input_files
+
+# let's start by making a histogram of the true and reconstructed directions
+# so, we make an empty array for each
+
+ophelia_zenith = np.asarray([])
+linefit_zenith = np.asarray([])
+true_zenith = np.asarray([])
+hqtot = np.asarray([])
+
+
+# now, we loop over every file
+for file in files:
+
+	# we open the hdf5 file for reading
+	file_in = h5py.File(file, "r")
+
+	# and now we "concatenate" our existing list and the new list!
+
+	# note, if you want to see what variable names are available, 
+	# you can try something like the following
+	# print(file_in['EHEOpheliaParticleSRT_ImpLF'].dtype.names)
+
+	# try/except statements are way of preventing the program from crashing 
+	# if something is horribly wrong
+	try:
+		ophelia_zenith = np.concatenate((ophelia_zenith, 
+			file_in['EHEOpheliaParticleSRT_ImpLF']['zenith']))
+		linefit_zenith = np.concatenate((linefit_zenith,
+			file_in['LineFit']['zenith']))
+		true_zenith = np.concatenate((true_zenith,
+			file_in['NuPrimary']['zenith']))
+		hqtot = np.concatenate((hqtot,
+			file_in['Homogenized_QTot']['value']))
+	except:
+		print('Skipping {}'.format(file))
+
+	# close the file
+	file_in.close()
+
+# we are going to convert the radians to degrees
+ophelia_zenith = np.rad2deg(ophelia_zenith)
+linefit_zenith = np.rad2deg(linefit_zenith)
+true_zenith = np.rad2deg(true_zenith)
+
+log_qtot = np.log10(hqtot)
+mask = log_qtot > 4
+print(mask)
+
+'''
+# true plot
+fig = plt.figure(figsize=(5,5))
+ax = fig.add_subplot(111)
+bins = np.linspace(0,180,37) # let's do binning from 0 -> 360 in 5 degree bins
+#ax.hist(ophelia_zenith,bins=bins, alpha=0.5, label='Ophelia')
+#ax.hist(linefit_zenith,bins=bins, alpha=0.5, label='LineFit')
+ax.hist(true_zenith[mask],bins=bins, alpha=0.5, label='True')
+ax.set_ylabel('Number of Events')
+ax.set_xlabel('Zenith [deg]')
+ax.legend()
+plt.title('Electron Neutrinos')
+plt.tight_layout()
+fig.savefig('fig_zen_electrons_true(chargecut).png', dpi=300)
+del fig, ax
+
+# ophelia plot
+fig = plt.figure(figsize=(5,5))
+bx = fig.add_subplot(111)
+bins = np.linspace(0,180,37) # let's do binning from 0 -> 360 in 5 degree bins
+bx.hist(ophelia_zenith[mask],bins=bins, alpha=0.5, label='Ophelia')
+#bx.hist(linefit_zenith,bins=bins, alpha=0.5, label='LineFit')
+#bx.hist(true_zenith,bins=bins, alpha=0.5, label='True')
+bx.set_ylabel('Number of Events')
+bx.set_xlabel('Zenith [deg]')
+bx.legend()
+plt.title('Electron Neutrinos')
+plt.tight_layout()
+fig.savefig('fig_zen_electrons_ophelia(chargecut).png', dpi=300)
+del fig, bx
+
+# linefit plot
+fig = plt.figure(figsize=(5,5))
+cx = fig.add_subplot(111)
+bins = np.linspace(0,180,37) # let's do binning from 0 -> 360 in 5 degree bins
+#cx.hist(ophelia_zenith,bins=bins, alpha=0.5, label='Ophelia')
+cx.hist(linefit_zenith[mask],bins=bins, alpha=0.5, label='LineFit')
+#cx.hist(true_zenith,bins=bins, alpha=0.5, label='True')
+cx.set_ylabel('Number of Events')
+cx.set_xlabel('Zenith [deg]')
+cx.legend()
+plt.title('Electron Neutrinos')
+plt.tight_layout()
+fig.savefig('fig_zen_electrons_linefit(chargecut).png', dpi=300)
+del fig, cx
+
+# all plot log scale
+fig = plt.figure(figsize=(5,5))
+dx = fig.add_subplot(111)
+bins = np.linspace(0,180,37) # let's do binning from 0 -> 360 in 5 degree bins
+dx.hist(ophelia_zenith[mask],bins=bins, alpha=0.5, label='Ophelia')
+dx.hist(linefit_zenith[mask],bins=bins, alpha=0.5, label='LineFit')
+dx.hist(true_zenith[mask],bins=bins, alpha=0.5, label='True')
+dx.set_ylabel('Number of Events')
+dx.set_xlabel('Zenith [deg]')
+dx.legend()
+dx.set_yscale('log')
+plt.title('Electron Neutrinos')
+plt.tight_layout()
+fig.savefig('fig_zen_electrons_all(chargecut).png', dpi=300)
+del fig, dx
+'''
+
+# all plot
+fig = plt.figure(figsize=(5,5))
+ex = fig.add_subplot(111)
+bins = np.linspace(0,180,37) # let's do binning from 0 -> 360 in 5 degree bins
+ex.hist(ophelia_zenith[mask],bins=bins, alpha=0.5, label='Ophelia')
+ex.hist(linefit_zenith[mask],bins=bins, alpha=0.5, label='LineFit')
+ex.hist(true_zenith[mask],bins=bins, alpha=0.5, label='True')
+ex.set_ylabel('Number of Events')
+ex.set_xlabel('Zenith [deg]')
+ex.legend()
+plt.title('Electron Neutrinos')
+plt.tight_layout()
+fig.savefig('fig_zen_electrons_log(chargecut).png', dpi=300)
+del fig, ex
+
+
+
+
